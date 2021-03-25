@@ -37,40 +37,47 @@
             this.mainstatuslabel = new System.Windows.Forms.ToolStripStatusLabel();
             this.pb1 = new System.Windows.Forms.ToolStripProgressBar();
             this.pntp = new System.Windows.Forms.Panel();
+            this.lpath = new System.Windows.Forms.Label();
+            this.lmask = new System.Windows.Forms.Label();
+            this.chdatafromDB = new System.Windows.Forms.CheckBox();
             this.txtText4SEarch = new System.Windows.Forms.TextBox();
             this.lfilrs = new System.Windows.Forms.ListBox();
-            this.faTabStripItem1 = new FarsiLibrary.Win.FATabStripItem();
             this.pntext = new System.Windows.Forms.Panel();
             this.fbd = new System.Windows.Forms.FolderBrowserDialog();
             this.splitter = new System.Windows.Forms.Splitter();
-            this.chdatafromDB = new System.Windows.Forms.CheckBox();
+            this.pnmanipul = new System.Windows.Forms.Panel();
+            this.bprev = new System.Windows.Forms.Button();
+            this.bnext = new System.Windows.Forms.Button();
             this.statusStrip1.SuspendLayout();
             this.pntp.SuspendLayout();
+            this.pntext.SuspendLayout();
+            this.pnmanipul.SuspendLayout();
             this.SuspendLayout();
             // 
             // txtpath4src
             // 
-            this.txtpath4src.Location = new System.Drawing.Point(12, 9);
+            this.txtpath4src.Location = new System.Drawing.Point(105, 9);
             this.txtpath4src.Name = "txtpath4src";
-            this.txtpath4src.Size = new System.Drawing.Size(642, 20);
+            this.txtpath4src.Size = new System.Drawing.Size(561, 20);
             this.txtpath4src.TabIndex = 0;
-            this.txtpath4src.Text = "\\\\192.168.65.11\\c2\\DS\\DS_hw\\";
+            this.txtpath4src.Text = "path for search";
             // 
             // txtmask
             // 
-            this.txtmask.Location = new System.Drawing.Point(12, 35);
+            this.txtmask.Location = new System.Drawing.Point(105, 32);
             this.txtmask.Name = "txtmask";
-            this.txtmask.Size = new System.Drawing.Size(167, 20);
+            this.txtmask.Size = new System.Drawing.Size(76, 20);
             this.txtmask.TabIndex = 1;
-            this.txtmask.Text = "*.py; *.ipynb";
+            this.txtmask.Text = "*.*";
             // 
             // badd
             // 
-            this.badd.Location = new System.Drawing.Point(657, 8);
+            this.badd.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.badd.Location = new System.Drawing.Point(672, 8);
             this.badd.Name = "badd";
             this.badd.Size = new System.Drawing.Size(75, 23);
             this.badd.TabIndex = 2;
-            this.badd.Text = "add2index";
+            this.badd.Text = "Добавить";
             this.badd.UseVisualStyleBackColor = true;
             this.badd.Click += new System.EventHandler(this.badd_Click);
             // 
@@ -110,6 +117,8 @@
             // 
             // pntp
             // 
+            this.pntp.Controls.Add(this.lpath);
+            this.pntp.Controls.Add(this.lmask);
             this.pntp.Controls.Add(this.chdatafromDB);
             this.pntp.Controls.Add(this.txtmask);
             this.pntp.Controls.Add(this.txtpath4src);
@@ -119,6 +128,36 @@
             this.pntp.Name = "pntp";
             this.pntp.Size = new System.Drawing.Size(1019, 63);
             this.pntp.TabIndex = 5;
+            // 
+            // lpath
+            // 
+            this.lpath.AutoSize = true;
+            this.lpath.Location = new System.Drawing.Point(2, 12);
+            this.lpath.Name = "lpath";
+            this.lpath.Size = new System.Drawing.Size(91, 13);
+            this.lpath.TabIndex = 6;
+            this.lpath.Text = "Путь для поиска";
+            // 
+            // lmask
+            // 
+            this.lmask.AutoSize = true;
+            this.lmask.Location = new System.Drawing.Point(12, 35);
+            this.lmask.Name = "lmask";
+            this.lmask.Size = new System.Drawing.Size(81, 13);
+            this.lmask.TabIndex = 5;
+            this.lmask.Text = "Маска файлов";
+            // 
+            // chdatafromDB
+            // 
+            this.chdatafromDB.AutoSize = true;
+            this.chdatafromDB.Checked = true;
+            this.chdatafromDB.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.chdatafromDB.Location = new System.Drawing.Point(192, 34);
+            this.chdatafromDB.Name = "chdatafromDB";
+            this.chdatafromDB.Size = new System.Drawing.Size(253, 17);
+            this.chdatafromDB.TabIndex = 3;
+            this.chdatafromDB.Text = "Подгружать содержимое из БД(V)/из файла";
+            this.chdatafromDB.UseVisualStyleBackColor = true;
             // 
             // txtText4SEarch
             // 
@@ -145,17 +184,9 @@
             this.lfilrs.TabIndex = 7;
             this.lfilrs.SelectedIndexChanged += new System.EventHandler(this.lfilrs_SelectedIndexChanged);
             // 
-            // faTabStripItem1
-            // 
-            this.faTabStripItem1.IsDrawn = true;
-            this.faTabStripItem1.Name = "faTabStripItem1";
-            this.faTabStripItem1.Selected = true;
-            this.faTabStripItem1.Size = new System.Drawing.Size(798, 142);
-            this.faTabStripItem1.TabIndex = 0;
-            this.faTabStripItem1.Title = "TabStrip Page 1";
-            // 
             // pntext
             // 
+            this.pntext.Controls.Add(this.pnmanipul);
             this.pntext.Dock = System.Windows.Forms.DockStyle.Fill;
             this.pntext.Location = new System.Drawing.Point(0, 152);
             this.pntext.Name = "pntext";
@@ -172,17 +203,39 @@
             this.splitter.TabIndex = 0;
             this.splitter.TabStop = false;
             // 
-            // chdatafromDB
+            // pnmanipul
             // 
-            this.chdatafromDB.AutoSize = true;
-            this.chdatafromDB.Checked = true;
-            this.chdatafromDB.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.chdatafromDB.Location = new System.Drawing.Point(186, 38);
-            this.chdatafromDB.Name = "chdatafromDB";
-            this.chdatafromDB.Size = new System.Drawing.Size(253, 17);
-            this.chdatafromDB.TabIndex = 3;
-            this.chdatafromDB.Text = "Подгружать содержимое из БД(V)/из файла";
-            this.chdatafromDB.UseVisualStyleBackColor = true;
+            this.pnmanipul.Controls.Add(this.bnext);
+            this.pnmanipul.Controls.Add(this.bprev);
+            this.pnmanipul.Dock = System.Windows.Forms.DockStyle.Top;
+            this.pnmanipul.Location = new System.Drawing.Point(0, 0);
+            this.pnmanipul.Name = "pnmanipul";
+            this.pnmanipul.Size = new System.Drawing.Size(1019, 24);
+            this.pnmanipul.TabIndex = 0;
+            // 
+            // bprev
+            // 
+            this.bprev.AutoSize = true;
+            this.bprev.Dock = System.Windows.Forms.DockStyle.Left;
+            this.bprev.Location = new System.Drawing.Point(0, 0);
+            this.bprev.Name = "bprev";
+            this.bprev.Size = new System.Drawing.Size(32, 24);
+            this.bprev.TabIndex = 0;
+            this.bprev.Text = "<";
+            this.bprev.UseVisualStyleBackColor = true;
+            this.bprev.Click += new System.EventHandler(this.bprev_Click);
+            // 
+            // bnext
+            // 
+            this.bnext.AutoSize = true;
+            this.bnext.Dock = System.Windows.Forms.DockStyle.Left;
+            this.bnext.Location = new System.Drawing.Point(32, 0);
+            this.bnext.Name = "bnext";
+            this.bnext.Size = new System.Drawing.Size(32, 24);
+            this.bnext.TabIndex = 1;
+            this.bnext.Text = ">";
+            this.bnext.UseVisualStyleBackColor = true;
+            this.bnext.Click += new System.EventHandler(this.bnext_Click);
             // 
             // Form1
             // 
@@ -205,6 +258,9 @@
             this.statusStrip1.PerformLayout();
             this.pntp.ResumeLayout(false);
             this.pntp.PerformLayout();
+            this.pntext.ResumeLayout(false);
+            this.pnmanipul.ResumeLayout(false);
+            this.pnmanipul.PerformLayout();
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -221,12 +277,16 @@
         private System.Windows.Forms.Panel pntp;
         private System.Windows.Forms.TextBox txtText4SEarch;
         private System.Windows.Forms.ListBox lfilrs;
-        private System.Windows.Forms.ToolStripProgressBar pb1;
-        private FarsiLibrary.Win.FATabStripItem faTabStripItem1;
+        private System.Windows.Forms.ToolStripProgressBar pb1;        
         private System.Windows.Forms.Panel pntext;
         private System.Windows.Forms.FolderBrowserDialog fbd;
         private System.Windows.Forms.Splitter splitter;
         private System.Windows.Forms.CheckBox chdatafromDB;
+        private System.Windows.Forms.Label lmask;
+        private System.Windows.Forms.Label lpath;
+        private System.Windows.Forms.Panel pnmanipul;
+        private System.Windows.Forms.Button bprev;
+        private System.Windows.Forms.Button bnext;
     }
 }
 

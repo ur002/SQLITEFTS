@@ -1,4 +1,4 @@
-﻿using FarsiLibrary.Win;
+﻿
 using FastColoredTextBoxNS;
 using System;
 using System.Collections.Generic;
@@ -21,11 +21,13 @@ namespace SQLITEFTS
        static string _FTS_TABLE = "FTS";
        static string _workpath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "FTS_tool");
        static string _dbfullpath = Path.Combine(_workpath, _DATABASE_NAME);
-        private SQLiteConnection sqlcon;
-        private List<SRCResult> FoundFiles = new List<SRCResult>();
-        private bool _load = false;
-        private bool _dosrc = false;
-         FastColoredTextBox _tb = new FastColoredTextBox();
+       private SQLiteConnection sqlcon;
+       private List<SRCResult> FoundFiles = new List<SRCResult>();
+       private bool _load = false;
+       private bool _dosrc = false;
+       FastColoredTextBox _tb = new FastColoredTextBox();
+       private List<int> _srcw = new List<int>();
+        private int _srcw_curr_pos = 0;
 
 
 
@@ -38,6 +40,7 @@ namespace SQLITEFTS
         {
             if (fbd.ShowDialog() != DialogResult.Cancel)
             {
+                badd.Enabled = false;
                 txtpath4src.Text = fbd.SelectedPath;                
                 Task.Run(async () => add2index());
             }
@@ -124,6 +127,7 @@ namespace SQLITEFTS
                             rlog.Visible = true;
                             rlog.AppendText("Query ERR " + ex.Message + Environment.NewLine + qry);
                             rlog.Height = 55;
+                            badd.Enabled = true;
                         });
 
                     }
@@ -152,7 +156,8 @@ namespace SQLITEFTS
             GC.Collect();
             Invoke((MethodInvoker)delegate
             {
-                pb1.Visible = false;                
+                pb1.Visible = false;
+                badd.Enabled = true;
             });
         }
 
@@ -438,15 +443,7 @@ namespace SQLITEFTS
                     SQLiteDataReader r = cmd.ExecuteReader();
                     while (r.Read())
                     {
-                        //      txtdata.Text = r["content"].ToString();
-                        //CreateTab(selitem.FileName, r[1].ToString());
-
-                        //txtdata.Text = "";
-
                         _tb.Text = r[0].ToString();
-
-
-
                     }
                 }
                 else
@@ -475,6 +472,38 @@ namespace SQLITEFTS
                     rlog.Height = 55;
                 });
             }
+
+            Invoke((MethodInvoker)delegate
+            {
+                _srcw_curr_pos = 0;
+                var ll = _tb.SelectNext(txtText4SEarch.Text, false, System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+                 _srcw = _tb.FindLines(txtText4SEarch.Text,System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+                selword(_srcw_curr_pos);
+            });
+
+            }
+
+        private void bprev_Click(object sender, EventArgs e)
+        {
+            if (_srcw_curr_pos>0)
+                _srcw_curr_pos--;
+            selword(_srcw_curr_pos);
+
+        }
+
+        void selword(int linenumber)
+        {
+            _tb.PlaceToPoint(new Place(1, _srcw[linenumber]));
+            _tb.Navigate(_srcw[linenumber]);        
+            _tb.Selection.Start = new Place(1, _srcw[linenumber]);
+            _tb.Selection.End = new Place(_tb.Lines[_srcw[linenumber]].Length, _srcw[linenumber]);
+        }
+
+        private void bnext_Click(object sender, EventArgs e)
+        {
+            if (_srcw_curr_pos < _srcw.Count-1)
+                _srcw_curr_pos++;
+            selword(_srcw_curr_pos);
         }
     }
 
