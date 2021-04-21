@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
 using System.Data.SQLite;
+using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Linq;
@@ -395,7 +396,8 @@ namespace SQLITEFTS
             {
                 SQLiteCommand cmd = new SQLiteCommand();
                 cmd.Connection = sqlcon;
-                qry = $"SELECT {_FTS_TABLE}_Files.FileID,{_FTS_TABLE}_Files.FileName FROM {_FTS_TABLE} left join {_FTS_TABLE}_Files on {_FTS_TABLE}.fileid={_FTS_TABLE}_Files.FileID WHERE {_FTS_TABLE} MATCH '{text}';";
+                qry = $"SELECT {_FTS_TABLE}_Files.FileID,{_FTS_TABLE}_Files.FileName FROM {_FTS_TABLE} left join {_FTS_TABLE}_Files on {_FTS_TABLE}.fileid={_FTS_TABLE}_Files.FileID WHERE {_FTS_TABLE} MATCH '{text}' ";
+                if (txtmask.Text != "*.*") qry += $"  and filename like '{txtmask.Text.Replace("*", "%")}' ";
                 cmd.CommandText = qry;
                 SQLiteDataReader r = cmd.ExecuteReader();
                 while (r.Read())
@@ -523,6 +525,11 @@ namespace SQLITEFTS
             if (_srcw_curr_pos < _srcw.Count-1)
                 _srcw_curr_pos++;
             selword(_srcw_curr_pos);
+        }
+
+        private void rlog_MouseDoubleClick(object sender, MouseEventArgs e)
+        {
+            Process.Start("explorer.exe", @"https://www.sqlite.org/fts5.html#full_text_query_syntax");
         }
     }
 

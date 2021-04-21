@@ -43,11 +43,11 @@
             this.txtText4SEarch = new System.Windows.Forms.TextBox();
             this.lfilrs = new System.Windows.Forms.ListBox();
             this.pntext = new System.Windows.Forms.Panel();
+            this.pnmanipul = new System.Windows.Forms.Panel();
+            this.bnext = new System.Windows.Forms.Button();
+            this.bprev = new System.Windows.Forms.Button();
             this.fbd = new System.Windows.Forms.FolderBrowserDialog();
             this.splitter = new System.Windows.Forms.Splitter();
-            this.pnmanipul = new System.Windows.Forms.Panel();
-            this.bprev = new System.Windows.Forms.Button();
-            this.bnext = new System.Windows.Forms.Button();
             this.statusStrip1.SuspendLayout();
             this.pntp.SuspendLayout();
             this.pntext.SuspendLayout();
@@ -85,12 +85,15 @@
             // 
             this.rlog.BackColor = System.Drawing.SystemColors.Control;
             this.rlog.BorderStyle = System.Windows.Forms.BorderStyle.None;
+            this.rlog.Cursor = System.Windows.Forms.Cursors.Help;
             this.rlog.Dock = System.Windows.Forms.DockStyle.Bottom;
             this.rlog.Location = new System.Drawing.Point(0, 483);
             this.rlog.Multiline = true;
             this.rlog.Name = "rlog";
+            this.rlog.ReadOnly = true;
             this.rlog.Size = new System.Drawing.Size(1019, 20);
             this.rlog.TabIndex = 3;
+            this.rlog.MouseDoubleClick += new System.Windows.Forms.MouseEventHandler(this.rlog_MouseDoubleClick);
             // 
             // statusStrip1
             // 
@@ -193,16 +196,6 @@
             this.pntext.Size = new System.Drawing.Size(1019, 331);
             this.pntext.TabIndex = 10;
             // 
-            // splitter
-            // 
-            this.splitter.Cursor = System.Windows.Forms.Cursors.HSplit;
-            this.splitter.Dock = System.Windows.Forms.DockStyle.Top;
-            this.splitter.Location = new System.Drawing.Point(0, 149);
-            this.splitter.Name = "splitter";
-            this.splitter.Size = new System.Drawing.Size(1019, 3);
-            this.splitter.TabIndex = 0;
-            this.splitter.TabStop = false;
-            // 
             // pnmanipul
             // 
             this.pnmanipul.Controls.Add(this.bnext);
@@ -212,6 +205,18 @@
             this.pnmanipul.Name = "pnmanipul";
             this.pnmanipul.Size = new System.Drawing.Size(1019, 24);
             this.pnmanipul.TabIndex = 0;
+            // 
+            // bnext
+            // 
+            this.bnext.AutoSize = true;
+            this.bnext.Dock = System.Windows.Forms.DockStyle.Left;
+            this.bnext.Location = new System.Drawing.Point(32, 0);
+            this.bnext.Name = "bnext";
+            this.bnext.Size = new System.Drawing.Size(32, 24);
+            this.bnext.TabIndex = 1;
+            this.bnext.Text = ">";
+            this.bnext.UseVisualStyleBackColor = true;
+            this.bnext.Click += new System.EventHandler(this.bnext_Click);
             // 
             // bprev
             // 
@@ -225,17 +230,15 @@
             this.bprev.UseVisualStyleBackColor = true;
             this.bprev.Click += new System.EventHandler(this.bprev_Click);
             // 
-            // bnext
+            // splitter
             // 
-            this.bnext.AutoSize = true;
-            this.bnext.Dock = System.Windows.Forms.DockStyle.Left;
-            this.bnext.Location = new System.Drawing.Point(32, 0);
-            this.bnext.Name = "bnext";
-            this.bnext.Size = new System.Drawing.Size(32, 24);
-            this.bnext.TabIndex = 1;
-            this.bnext.Text = ">";
-            this.bnext.UseVisualStyleBackColor = true;
-            this.bnext.Click += new System.EventHandler(this.bnext_Click);
+            this.splitter.Cursor = System.Windows.Forms.Cursors.HSplit;
+            this.splitter.Dock = System.Windows.Forms.DockStyle.Top;
+            this.splitter.Location = new System.Drawing.Point(0, 149);
+            this.splitter.Name = "splitter";
+            this.splitter.Size = new System.Drawing.Size(1019, 3);
+            this.splitter.TabIndex = 0;
+            this.splitter.TabStop = false;
             // 
             // Form1
             // 
