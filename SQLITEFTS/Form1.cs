@@ -444,7 +444,26 @@ namespace SQLITEFTS
                     while (r.Read())
                     {
                         _tb.Text = r[0].ToString();
+                        string ext = Path.GetExtension(Path.GetExtension(selitem.FileName)).ToLower();
+
+                        _tb.ClearStylesBuffer();
+                        _tb.Range.ClearStyle(StyleIndex.All);                      
+                        _tb.Language = Language.CSharp;
+                        switch (ext)
+                        {
+
+                            case ".vb": _tb.Language = Language.VB; break;
+                            case ".hml": _tb.Language = Language.HTML; break;
+                            case ".xml": _tb.Language = Language.XML; break;
+                            case ".sql": _tb.Language = Language.SQL; break;
+                            case ".php": _tb.Language = Language.PHP; break;
+                            case ".js": _tb.Language = Language.JS; break;
+                            case ".lua": _tb.Language = Language.Lua; break;
+                        }
                     }
+
+                    _tb.OnSyntaxHighlight(new TextChangedEventArgs(_tb.Range));
+                    
                 }
                 else
                 {
