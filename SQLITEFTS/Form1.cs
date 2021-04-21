@@ -376,6 +376,7 @@ namespace SQLITEFTS
         {
             if (e.KeyCode == Keys.Enter )
             {
+                if (txtText4SEarch.Text.Length == 0) return;
                _dosrc = true;
                 lfilrs.DataSource = null;
                 lfilrs.DisplayMember = "FileName";

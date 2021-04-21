@@ -69,6 +69,7 @@
             this.txtmask.Size = new System.Drawing.Size(76, 20);
             this.txtmask.TabIndex = 1;
             this.txtmask.Text = "*.*";
+            this.txtmask.KeyDown += new System.Windows.Forms.KeyEventHandler(this.txtText4SEarch_KeyDown);
             // 
             // badd
             // 
