@@ -18,16 +18,16 @@ namespace SQLITEFTS
     public partial class Form1 : Form
     {
 
-       static string  _DATABASE_NAME = "FTS.db3";
-       static string _FTS_TABLE = "FTS";
-       static string _workpath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "FTS_tool");
-       static string _dbfullpath = Path.Combine(_workpath, _DATABASE_NAME);
-       private SQLiteConnection sqlcon;
-       private List<SRCResult> FoundFiles = new List<SRCResult>();
-       private bool _load = false;
-       private bool _dosrc = false;
-       FastColoredTextBox _tb = new FastColoredTextBox();
-       private List<int> _srcw = new List<int>();
+        static string _DATABASE_NAME = "FTS.db3";
+        static string _FTS_TABLE = "FTS";
+        static string _workpath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "FTS_tool");
+        static string _dbfullpath = Path.Combine(_workpath, _DATABASE_NAME);
+        private SQLiteConnection sqlcon;
+        private List<SRCResult> _FoundFiles = new List<SRCResult>();
+        private List<SRCResult> _FilesInDB = new List<SRCResult>();
+        private bool _dosrc = false;
+        FastColoredTextBox _tb = new FastColoredTextBox();
+        private List<int> _srcw = new List<int>();
         private int _srcw_curr_pos = 0;
 
 
@@ -42,81 +42,105 @@ namespace SQLITEFTS
             if (fbd.ShowDialog() != DialogResult.Cancel)
             {
                 badd.Enabled = false;
-                txtpath4src.Text = fbd.SelectedPath;                
-                Task.Run(async () => add2index());
+                txtpath4src.Text = fbd.SelectedPath;
+                Task.Run(() => add2index(chUPDContentIfHashDiff.Checked));
             }
         }
 
-        private void add2index()
+        private void add2index(bool updcontent = false)
         {
-            SetStatus("Scan for files");
+            SetStatus("Scanning for files");
             var files = Directory.GetFiles(txtpath4src.Text, txtmask.Text, System.IO.SearchOption.AllDirectories);
             if (files.Length == 0) return;
-            Invoke((MethodInvoker)delegate
-            {
-                pb1.Visible = true;
-                pb1.Maximum = files.Length;
-            });
+
+            SetPBVisible(true);
+            SetPBMax(files.Length);
+
             SetStatus("Scan complite");
             string qry = "";
             int i = 0;
             foreach (string fname in files)
             {
                 SetStatus($"Add '{fname}' to index.");
-                if (File.Exists(fname) && GetRowID(fname)==-1)
+                if (File.Exists(fname))
                     try
                     {
-                     using (SQLiteTransaction myTransaction = sqlcon.BeginTransaction())
-                        {
-                            using (SQLiteCommand servCommand = new SQLiteCommand(sqlcon))
+                        SRCResult FndData = _FilesInDB.FirstOrDefault(x => x.FileName == fname);
+                        int rowid = FndData != null ? FndData.FileID : -1;
+                        string FileHash = TMD5.ComputeFilesMD5(fname);
+                        string runqry = "";
+                        if ((updcontent && FileHash != FndData?.FileHash) || rowid == -1)
+
+                            using (SQLiteTransaction myTransaction = sqlcon.BeginTransaction())
                             {
-                                SQLiteParameter FileName = new SQLiteParameter();
-                                
-
-                                servCommand.CommandText = $"INSERT INTO {_FTS_TABLE}_Files (FileName) VALUES (?)";
-                                FileName.Value = fname;
-                                
-
-                                servCommand.Parameters.Add(FileName);
-                                var result = servCommand.ExecuteNonQueryAsync();
-                                if (result.IsFaulted)
+                                using (SQLiteCommand servCommand = new SQLiteCommand(sqlcon))
                                 {
-                                    Invoke((MethodInvoker)delegate
+                                    SQLiteParameter FileName = new SQLiteParameter();
+                                    if (rowid != -1)
                                     {
-                                        rlog.Visible = true;
-                                        rlog.AppendText($"InsertFileName fault:{result.Exception.InnerException.Message}");
-                                        rlog.Height = 55;
-                                    });
-                                    break;
-                                }
-                                long rid = servCommand.Connection.LastInsertRowId;
-                                int newrowid = GetRowID(fname);
-                                SQLiteCommand insCommand = new SQLiteCommand(sqlcon);
-                                insCommand.CommandText = $"INSERT OR REPLACE INTO {_FTS_TABLE} (fileid, content) VALUES(?, ?)";
+                                        sql3runquery($"delete from {_FTS_TABLE} where fileid={rowid}", ref sqlcon);
+                                        sql3runquery($"delete from {_FTS_TABLE}_Files where fileid={rowid}", ref sqlcon);
+                                    }
 
-                                SQLiteParameter FileData = new SQLiteParameter();
-                                SQLiteParameter FileID = new SQLiteParameter();
-                                FileData.Value = File.ReadAllText(fname);
-                                FileID.Value = newrowid;
-                                insCommand.Parameters.Add(FileID);
-                                insCommand.Parameters.Add(FileData);
-
-                                result = insCommand.ExecuteNonQueryAsync();
-                                if (result.IsFaulted)
-                                {
-                                    Invoke((MethodInvoker)delegate
+                                    servCommand.CommandText = $"INSERT INTO {_FTS_TABLE}_Files (FileName) VALUES (?)";
+                                    FileName.Value = fname;
+                                    servCommand.Parameters.Add(FileName);
+                                    var result = servCommand.ExecuteNonQueryAsync();
+                                    if (result.IsFaulted)
                                     {
-                                        rlog.Visible = true;
-                                        rlog.AppendText($"InsertFileName fault:{result.Exception.InnerException.Message}");
-                                        rlog.Height = 55;
-                                    });
-                                    break;
+                                        Invoke((MethodInvoker)delegate
+                                        {
+                                            rlog.Visible = true;
+                                            rlog.AppendText($"InsertFileName fault:{result.Exception.InnerException.Message}");
+                                            rlog.Height = 55;
+                                        });
+                                        break;
+                                    }
+
+                                    long rid = servCommand.Connection.LastInsertRowId;
+                                    int newrowid = GetRowID(fname);
+
+                                    SQLiteCommand insCommand = new SQLiteCommand(sqlcon);
+                                    insCommand.CommandText = $"INSERT OR REPLACE INTO {_FTS_TABLE} (fileid, content) VALUES(?, ?)";
+
+                                    SQLiteParameter FileData = new SQLiteParameter();
+                                    SQLiteParameter FileID = new SQLiteParameter();
+                                    FileData.Value = File.ReadAllText(fname);
+                                    FileID.Value = newrowid;
+                                    insCommand.Parameters.Add(FileID);
+                                    insCommand.Parameters.Add(FileData);
+
+                                    result = insCommand.ExecuteNonQueryAsync();
+                                    if (result.IsFaulted)
+                                    {
+                                        Invoke((MethodInvoker)delegate
+                                        {
+                                            rlog.Visible = true;
+                                            rlog.AppendText($"InsertFileName fault:{result.Exception.InnerException.Message}");
+                                            rlog.Height = 55;
+                                        });
+                                        break;
+                                    }
+
+                                    servCommand.CommandText = $"Update {_FTS_TABLE}_Files set FileHash='(?)' where FileID=(?)";
+                                    servCommand.Parameters.Add(new SQLiteParameter("FileHash", FileHash));
+                                    servCommand.Parameters.Add(new SQLiteParameter("FileID", rowid));
+                                    var result3 = servCommand.ExecuteNonQueryAsync();
+                                    if (result3.IsFaulted)
+                                    {
+                                        Invoke((MethodInvoker)delegate
+                                        {
+                                            rlog.Visible = true;
+                                            rlog.AppendText($"Update FileHash fault:{result3.Exception.InnerException.Message}");
+                                            rlog.Height = 55;
+                                        });
+                                        break;
+                                    }
+
+
                                 }
-
-
+                                myTransaction.Commit();
                             }
-                            myTransaction.Commit();
-                        }
 
 
 
@@ -135,10 +159,12 @@ namespace SQLITEFTS
                 SetStatus(i + "/" + files.Length);
                 UPDPB1(i);
                 i++;
-                
+
 
 
             }
+
+
             SQLiteCommand srvCommand = new SQLiteCommand(sqlcon);
             srvCommand.CommandText = $"INSERT INTO {_FTS_TABLE} VALUES('optimize','optimize')";
             var res = srvCommand.ExecuteNonQueryAsync();
@@ -155,10 +181,20 @@ namespace SQLITEFTS
             SetStatus("Ожидание");
             UPDPB1(0);
             GC.Collect();
+            SetPBVisible(false);
+            Task.Run(() => initDBFiles());
             Invoke((MethodInvoker)delegate
             {
-                pb1.Visible = false;
                 badd.Enabled = true;
+            });
+        }
+
+        private void SetPBVisible(bool v)
+        {
+            Invoke((MethodInvoker)delegate
+            {
+                pb1.Visible = v;
+
             });
         }
 
@@ -179,9 +215,8 @@ namespace SQLITEFTS
                     servCommand.CommandText = $"SELECT RowID FROM {_FTS_TABLE}_Files WHERE FileName=?";
                     FileNameParam.Value = fname;
                     servCommand.Parameters.Add(FileNameParam);
-
-                   var rowid = servCommand.ExecuteScalarAsync();
-                    res = Convert.ToInt32(rowid.Result?? -1);
+                    var rowid = servCommand.ExecuteScalarAsync();
+                    res = Convert.ToInt32(rowid.Result ?? -1);
                 }
                 myTransaction.Commit();
             }
@@ -196,6 +231,22 @@ namespace SQLITEFTS
             });
         }
 
+        private void UpdateHeader(string statustext)
+        {
+            Invoke((MethodInvoker)delegate
+            {
+                this.Text = statustext;
+            });
+        }
+
+        private void SetPBMax(int value)
+        {
+            Invoke((MethodInvoker)delegate
+            {
+                pb1.Maximum = value;
+            });
+        }
+
         private void UPDPB1(int value)
         {
             Invoke((MethodInvoker)delegate
@@ -204,6 +255,34 @@ namespace SQLITEFTS
             });
 
         }
+
+
+        private void UPDFNDText(string result,string ext)
+        {
+            Invoke((MethodInvoker)delegate
+            {
+                _tb.Text = result;
+                _tb.ClearStylesBuffer();
+                _tb.Range.ClearStyle(StyleIndex.All);
+                _tb.Language = Language.CSharp;
+                switch (ext)
+                {
+
+                    case ".vb": _tb.Language = Language.VB; break;
+                    case ".hml": _tb.Language = Language.HTML; break;
+                    case ".xml": _tb.Language = Language.XML; break;
+                    case ".sql": _tb.Language = Language.SQL; break;
+                    case ".php": _tb.Language = Language.PHP; break;
+                    case ".js": _tb.Language = Language.JS; break;
+                    case ".lua": _tb.Language = Language.Lua; break;
+                }
+                _tb.OnSyntaxHighlight(new TextChangedEventArgs(_tb.Range));
+               
+            });
+
+        }
+
+
         private void createdb(ref SQLiteConnection sqlcon)
         {
             if (!Directory.Exists(_workpath))
@@ -213,14 +292,14 @@ namespace SQLITEFTS
 
 
             SetStatus("Creating new tables ...");
-            
+
             try
-            { 
+            {
                 //SQLiteConnection.CreateFile(_dbfullpath);
                 string qry = $"CREATE VIRTUAL TABLE IF NOT EXISTS { _FTS_TABLE} " +
                 "USING FTS5(fileid, content, tokenize = 'porter')";
                 sql3runquery(qry, ref sqlcon);
-                qry = $"CREATE TABLE IF NOT EXISTS {_FTS_TABLE}_Files (FileID INTEGER PRIMARY KEY,FileName TEXT UNIQUE); ";
+                qry = $"CREATE TABLE IF NOT EXISTS {_FTS_TABLE}_Files (FileID INTEGER PRIMARY KEY,FileName TEXT UNIQUE,FileHash TEXT); ";
                 sql3runquery(qry, ref sqlcon);
 
             }
@@ -229,7 +308,7 @@ namespace SQLITEFTS
                 Invoke((MethodInvoker)delegate
                 {
                     rlog.Visible = true;
-                    rlog.AppendText("createdb."+ex.Message + Environment.NewLine );
+                    rlog.AppendText("createdb." + ex.Message + Environment.NewLine);
                     rlog.Height = 55;
                 });
             }
@@ -258,7 +337,7 @@ namespace SQLITEFTS
             }
         }
 
-        private string sql3scalar(string qry,ref SQLiteConnection conn)
+        private string sql3scalar(string qry, ref SQLiteConnection conn)
         {
             string r = "0";
             try
@@ -322,13 +401,13 @@ namespace SQLITEFTS
 
         string KiloByteText(long ABytes)
         {
-        return Convert.ToInt64((ABytes + 1023)/1024).ToString() + " KB";
+            return Convert.ToInt64((ABytes + 1023) / 1024).ToString() + " KB";
         }
 
         private void Form1_Load(object sender, EventArgs e)
         {
             SQLiteinit();
-           
+
             _tb.Font = new Font("Consolas", 9.75f);
             _tb.Dock = DockStyle.Fill;
             _tb.BorderStyle = BorderStyle.None;
@@ -338,8 +417,47 @@ namespace SQLITEFTS
             pntext.Controls.Add(_tb);
             _tb.Text = "";
             _tb.Focus();
-            _tb.ReadOnly = true;
+            _tb.ReadOnly = true;   
+            var res = Task.Run(() => initDBFiles());
 
+        }
+
+        void initDBFiles()
+        {
+            _FilesInDB.Clear();
+            SetStatus("Load Data from DB");
+            string qry = $"Select FileID ,FileName ,FileHash from { _FTS_TABLE}_Files";
+
+            try
+            {
+                SQLiteCommand cmd = new SQLiteCommand();
+                cmd.Connection = sqlcon;
+
+                cmd.CommandText = qry;
+                SQLiteDataReader r = cmd.ExecuteReader();
+                while (r.Read())
+                {
+                    SRCResult f = new SRCResult();
+                    f.FileID = Convert.ToInt32(r["FileID"]);
+                    f.FileName = r["FileName"].ToString();
+                    f.FileHash = r["FileHash"].ToString();
+                    _FoundFiles.Add(f);
+                }
+            }
+            catch (Exception ex)
+            {
+
+                Invoke((MethodInvoker)delegate
+                {
+                    rlog.Visible = true;
+                    rlog.AppendText("HardFileHashRecalc." + ex.Message + Environment.NewLine);
+                    rlog.Height = 55;
+                });
+            }
+            UPDPB1(0);
+            SetPBVisible(false);
+            SetStatus("Ready for work");
+            UpdateHeader($"FTS5 Engine. Files in DB:{_FoundFiles.Count}");
         }
 
         void SQLiteinit()
@@ -358,32 +476,29 @@ namespace SQLITEFTS
             sqlcon.LoadExtension(dllFullFileName, "sqlite3_fts5_init");
             //if (!File.Exists(Path.Combine(_workpath, _DATABASE_NAME)))
             createdb(ref sqlcon);
-            SetStatus("Ready to work");
-
-
-
         }
 
-     
+
 
         private void Form1_FormClosing(object sender, FormClosingEventArgs e)
         {
-            if (sqlcon.State == ConnectionState.Open)  sqlcon.Close();
+            if (sqlcon.State == ConnectionState.Open) sqlcon.Close();
             sqlcon.Dispose();
         }
 
         private void txtText4SEarch_KeyDown(object sender, KeyEventArgs e)
         {
-            if (e.KeyCode == Keys.Enter )
+            if (e.KeyCode == Keys.Enter)
             {
                 if (txtText4SEarch.Text.Length == 0) return;
-               _dosrc = true;
+                _dosrc = true;
+                this.Text = $"FTS5 Engine";
                 lfilrs.DataSource = null;
                 lfilrs.DisplayMember = "FileName";
-               var res = Task.Run(async () => SrcFiles(txtText4SEarch.Text));
-               Task.WaitAll();                
-               GC.Collect();
-
+                lfilrs.ValueMember = "FileID";
+                var res = Task.Run(async () => SrcFiles(txtText4SEarch.Text));
+                Task.WaitAll();
+                GC.Collect();
                 _dosrc = false;
             }
 
@@ -391,13 +506,13 @@ namespace SQLITEFTS
 
         private void SrcFiles(string text)
         {
-            FoundFiles.Clear();
+            _FoundFiles.Clear();
             string qry = "";
             try
             {
                 SQLiteCommand cmd = new SQLiteCommand();
                 cmd.Connection = sqlcon;
-                qry = $"SELECT {_FTS_TABLE}_Files.FileID,{_FTS_TABLE}_Files.FileName FROM {_FTS_TABLE} left join {_FTS_TABLE}_Files on {_FTS_TABLE}.fileid={_FTS_TABLE}_Files.FileID WHERE {_FTS_TABLE} MATCH '{text}' ";
+                qry = $"SELECT {_FTS_TABLE}_Files.FileID,{_FTS_TABLE}_Files.FileName,{_FTS_TABLE}_Files.FileHash   FROM {_FTS_TABLE} left join {_FTS_TABLE}_Files on {_FTS_TABLE}.fileid={_FTS_TABLE}_Files.FileID WHERE {_FTS_TABLE} MATCH '{text}' ";
                 if (txtmask.Text != "*.*") qry += $"  and filename like '{txtmask.Text.Replace("*", "%")}' ";
                 cmd.CommandText = qry;
                 SQLiteDataReader r = cmd.ExecuteReader();
@@ -406,84 +521,81 @@ namespace SQLITEFTS
                     SRCResult f = new SRCResult();
                     f.FileID = Convert.ToInt32(r["FileID"]);
                     f.FileName = r["FileName"].ToString();
+                    f.FileHash = r["FileHash"].ToString();
                     // f.content = r["content"]?.ToString() ?? "null";//.ToString();
-                    FoundFiles.Add(f);
+                    _FoundFiles.Add(f);
                 }
 
-                Invoke((MethodInvoker)delegate
-                {
-                    lfilrs.DataSource = FoundFiles;
-                    this.Text = $"FTS5 Engine:{FoundFiles.Count} files count";
-                });
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 Invoke((MethodInvoker)delegate
                 {
                     rlog.Visible = true;
                     rlog.AppendText("SrcFiles." + ex.Message + Environment.NewLine);
-                    rlog.AppendText($"qry={qry}"+ Environment.NewLine);
+                    rlog.AppendText($"qry={qry}" + Environment.NewLine);
 
-                  rlog.Height = 55;
+                    rlog.Height = 55;
                 });
             }
-            
-        }
-
-        private void lfilrs_SelectedIndexChanged(object sender, EventArgs e)
-        {
-            if (_dosrc) return;
-            try
+            finally
             {
-                SRCResult selitem = lfilrs.SelectedItem as SRCResult;
-                if (chdatafromDB.Checked)
+                Invoke((MethodInvoker)delegate
                 {
 
+                    lfilrs.DataSource = _FoundFiles;
+                    this.Text = $"FTS5 Engine:{_FoundFiles.Count} files count";
+                });
+            }
 
-                    SQLiteCommand cmd = new SQLiteCommand();
-                    cmd.Connection = sqlcon;
-                    cmd.CommandText = $"SELECT content  FROM {_FTS_TABLE} where {_FTS_TABLE}.fileid={selitem.FileID};";
-                    SQLiteDataReader r = cmd.ExecuteReader();
-                    while (r.Read())
+        }
+
+
+        void GetText(SRCResult item)
+        {
+            try
+            {
+
+                string ext = Path.GetExtension(Path.GetExtension(item.FileName)).ToLower();
+                string result = "";
+
+                if (File.Exists(item.FileName))
+                {
+                    if (chdatafromDB.Checked)
                     {
-                        _tb.Text = r[0].ToString();
-                        string ext = Path.GetExtension(Path.GetExtension(selitem.FileName)).ToLower();
-
-                        _tb.ClearStylesBuffer();
-                        _tb.Range.ClearStyle(StyleIndex.All);                      
-                        _tb.Language = Language.CSharp;
-                        switch (ext)
+                        if (item.FileHash != TMD5.ComputeFilesMD5(item.FileName))
                         {
+                            if (MessageBox.Show("Данные в файле отличаются от сохраненной копии, загрузить данные из файла?", "Найдено измененное содержимое файла", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
+                            {
+                                result = File.ReadAllText(item.FileName);
+                            }
+                        }
 
-                            case ".vb": _tb.Language = Language.VB; break;
-                            case ".hml": _tb.Language = Language.HTML; break;
-                            case ".xml": _tb.Language = Language.XML; break;
-                            case ".sql": _tb.Language = Language.SQL; break;
-                            case ".php": _tb.Language = Language.PHP; break;
-                            case ".js": _tb.Language = Language.JS; break;
-                            case ".lua": _tb.Language = Language.Lua; break;
+                        if (result == "")
+                        {
+                            SQLiteCommand cmd = new SQLiteCommand();
+                            cmd.Connection = sqlcon;
+                            cmd.CommandText = $"SELECT content  FROM {_FTS_TABLE} where {_FTS_TABLE}.fileid={item.FileID};";
+                            SQLiteDataReader r = cmd.ExecuteReader();
+                            while (r.Read())
+                            {
+                                result = r[0].ToString();
+                            }
                         }
                     }
-
-                    _tb.OnSyntaxHighlight(new TextChangedEventArgs(_tb.Range));
-                    
+                    else
+                        result = File.ReadAllText(item.FileName);
                 }
                 else
                 {
-                    if (File.Exists(selitem.FileName))
-                        _tb.Text = File.ReadAllText(selitem.FileName);
-                    else
+                    Invoke((MethodInvoker)delegate
                     {
-
-                        Invoke((MethodInvoker)delegate
-                        {
-                            rlog.Visible = true;
-                            rlog.AppendText($"File not found {selitem.FileName}" + Environment.NewLine);
-                            rlog.Height = 55;
-                        });
-                    }
+                        rlog.Visible = true;
+                        rlog.AppendText($"File not found {item.FileName}" + Environment.NewLine);
+                        rlog.Height = 55;
+                    });
                 }
-
+                UPDFNDText(result, ext);
             }
             catch (Exception ex)
             {
@@ -497,13 +609,35 @@ namespace SQLITEFTS
 
             Invoke((MethodInvoker)delegate
             {
-                _srcw_curr_pos = 0;
-                var ll = _tb.SelectNext(txtText4SEarch.Text, false, System.Text.RegularExpressions.RegexOptions.IgnoreCase);
-                 _srcw = _tb.FindLines(txtText4SEarch.Text,System.Text.RegularExpressions.RegexOptions.IgnoreCase);
-                selword(_srcw_curr_pos);
-            });
+                try
+                {
+                    _srcw_curr_pos = 0;
+                    var ll = _tb.SelectNext(txtText4SEarch.Text, false, System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+                    _srcw = _tb.FindLines(txtText4SEarch.Text, System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+                    selword(_srcw_curr_pos);
+                }
+                catch (Exception ex)
+                {
+                    Invoke((MethodInvoker)delegate
+                    {
+                        rlog.Visible = true;
+                        rlog.AppendText("SelectNext." + ex.Message + Environment.NewLine);
+                        rlog.Height = 55;
+                    });
+                }
 
-            }
+            });
+        }
+
+        private void lfilrs_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            if (_dosrc) return;
+            SRCResult selitem = lfilrs.SelectedItem as SRCResult;
+            var res = Task.Run(() => GetText(selitem));
+            Task.WaitAll();
+
+        }
+    
 
         private void bprev_Click(object sender, EventArgs e)
         {
@@ -515,6 +649,7 @@ namespace SQLITEFTS
 
         void selword(int linenumber)
         {
+            if (linenumber == 0) return;
             _tb.PlaceToPoint(new Place(1, _srcw[linenumber]));
             _tb.Navigate(_srcw[linenumber]);        
             _tb.Selection.Start = new Place(1, _srcw[linenumber]);
@@ -532,13 +667,87 @@ namespace SQLITEFTS
         {
             Process.Start("explorer.exe", @"https://www.sqlite.org/fts5.html#full_text_query_syntax");
         }
+
+        void HardFileHashRecalc()
+        {
+            SetStatus("Recalc hash of files in progress");
+            string qry = $" select FileID ,FileName ,FileHash from { _FTS_TABLE}_Files";
+
+            try
+            {
+                SQLiteCommand cmd = new SQLiteCommand();
+                cmd.Connection = sqlcon;
+
+                cmd.CommandText = qry;
+                SQLiteDataReader r = cmd.ExecuteReader();
+                while (r.Read())
+                {
+                    SRCResult f = new SRCResult();
+                    f.FileID = Convert.ToInt32(r["FileID"]);
+                    f.FileName = r["FileName"].ToString();
+                    f.FileHash = r["FileHash"].ToString();
+                    _FoundFiles.Add(f);
+                }
+
+                int i = 0;
+                SetPBVisible(true);
+                SetPBMax(_FoundFiles.Count);
+                foreach (var fl in _FoundFiles)
+                {
+                    try
+                    {
+                        if (File.Exists(fl.FileName))
+                        {
+                            string filehash = TMD5.ComputeFilesMD5(fl.FileName);
+                            qry = $"update {_FTS_TABLE}_Files set FileHash='{filehash}' where FileID={fl.FileID}";
+                            sql3runquery(qry, ref sqlcon);
+                        }
+                        UPDPB1(i);
+                        i++;
+                    }
+                    catch (Exception ex)
+                    {
+
+                        Invoke((MethodInvoker)delegate
+                        {
+                            rlog.Visible = true;
+                            rlog.AppendText("HardFileHashRecalc." + ex.Message + Environment.NewLine);
+                            rlog.Height = 55;
+                        });
+                    }
+                }
+                
+
+            }
+            catch (Exception ex)
+            {
+
+                Invoke((MethodInvoker)delegate
+                {
+                    rlog.Visible = true;
+                    rlog.AppendText("HardFileHashRecalc." + ex.Message + Environment.NewLine);
+                    rlog.Height = 55;
+                });
+            }
+            UPDPB1(0);
+            SetPBVisible(false);
+            SetStatus("Ready for work");
+        }
+
+
+        private void bUPDHASH_Click(object sender, EventArgs e)
+        {
+            var res = Task.Run(() => HardFileHashRecalc());
+        }
     }
+
 
     class SRCResult {
 
         public int FileID { get; set; }
         public string FileName { get; set; }
         public string content { get; set; }
+        public string FileHash { get; set; }
     }
 
 }
